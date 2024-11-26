@@ -81,10 +81,6 @@ class AnimatedDockItemWidgetState extends State<AnimatedDockItemWidget>
           // call for updating flag of initial spot animation
           setState(() {});
         case AnimationStatus.completed:
-          if(widget.dockController.isAnimatingBackToSlot){
-            // call for updating flag of initial spot animation
-            setState(() {});
-          }
           pointerOffset = Offset.zero;
           _controllerBackPositioning.reset();
           widget.dockController.shrinkDurationAfterInsertionCompleted = true;
@@ -281,47 +277,49 @@ class AnimatedDockItemWidgetState extends State<AnimatedDockItemWidget>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedPadding(
-      duration: _expandingDuration,
-      padding: EdgeInsets.only(
-        left: _leftExpansionValue,
-        right: _rightExpansionValue,
-      ),
-      child: widget.dockController.isShowAnimatedDummySlot(widget.index)
-          ? _AnimatedDummySlot(dockController: widget.dockController)
-          : MouseRegion(
-              hitTestBehavior: HitTestBehavior.translucent,
-              onExit: _onExitItem,
-              child: AnimatedBuilder(
-                animation: _controllerSliding,
-                builder: (context, child) {
-                  return Transform.translate(
-                    offset: Offset.zero.translate(0, _controllerSliding.value),
-                    child: child,
-                  );
-                },
+    return RepaintBoundary(
+      child: AnimatedPadding(
+        duration: _expandingDuration,
+        padding: EdgeInsets.only(
+          left: _leftExpansionValue,
+          right: _rightExpansionValue,
+        ),
+        child: widget.dockController.isShowAnimatedDummySlot(widget.index)
+            ? _AnimatedDummySlot(dockController: widget.dockController)
+            : MouseRegion(
+                hitTestBehavior: HitTestBehavior.translucent,
+                onExit: _onExitItem,
                 child: AnimatedBuilder(
-                  animation: _controllerRotation,
+                  animation: _controllerSliding,
                   builder: (context, child) {
-                    return Transform.rotate(
-                      angle: _controllerRotation.value * _rotationValue,
+                    return Transform.translate(
+                      offset: Offset.zero.translate(0, _controllerSliding.value),
                       child: child,
                     );
                   },
-                  child: Listener(
-                    behavior: HitTestBehavior.translucent,
-                    onPointerHover: _onPointerHover,
-                    onPointerDown: _onPointerDown,
-                    onPointerUp: _onPointerUp,
-                    onPointerMove: _onPointerMove,
-                    child: _StartSideExpandingListener(
-                        index: widget.index,
-                        dockController: widget.dockController,
-                        child: _BaseDockItem(iconData: widget.iconData)),
+                  child: AnimatedBuilder(
+                    animation: _controllerRotation,
+                    builder: (context, child) {
+                      return Transform.rotate(
+                        angle: _controllerRotation.value * _rotationValue,
+                        child: child,
+                      );
+                    },
+                    child: Listener(
+                      behavior: HitTestBehavior.translucent,
+                      onPointerHover: _onPointerHover,
+                      onPointerDown: _onPointerDown,
+                      onPointerUp: _onPointerUp,
+                      onPointerMove: _onPointerMove,
+                      child: _StartSideExpandingListener(
+                          index: widget.index,
+                          dockController: widget.dockController,
+                          child: _BaseDockItem(iconData: widget.iconData)),
+                    ),
                   ),
                 ),
               ),
-            ),
+      ),
     );
   }
 }

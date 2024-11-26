@@ -184,6 +184,7 @@ class DockController {
     if (dockDataSnapshot == null) {
       isAnimatingBackToSlot = false;
       isInitialSpotShowing = true;
+      rebuildDock();
       return;
     }
 

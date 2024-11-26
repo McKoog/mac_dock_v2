@@ -44,13 +44,11 @@ class HomeScreen extends StatelessWidget {
                 DockItem(iconData: Icons.photo),
               ],
               builder: (index, dockController, dockItem, updateDock) {
-                return RepaintBoundary(
+                return AnimatedDockItemWidget(
                   key: ValueKey(dockItem),
-                  child: AnimatedDockItemWidget(
-                    index: index,
-                    dockController: dockController,
-                    iconData: dockItem.iconData,
-                  ),
+                  index: index,
+                  dockController: dockController,
+                  iconData: dockItem.iconData,
                 );
               },
             ),
