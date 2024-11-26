@@ -80,6 +80,16 @@ class AnimatedDockItemWidgetState extends State<AnimatedDockItemWidget>
           _overlayEntry?.markNeedsBuild();
           // call for updating flag of initial spot animation
           setState(() {});
+        case AnimationStatus.completed:
+          if(widget.dockController.isAnimatingBackToSlot){
+            // call for updating flag of initial spot animation
+            setState(() {});
+          }
+          pointerOffset = Offset.zero;
+          _controllerBackPositioning.reset();
+          widget.dockController.shrinkDurationAfterInsertionCompleted = true;
+          _removeOverlay();
+          widget.dockController.onTryReorder();
         default:
           return;
       }
@@ -225,13 +235,7 @@ class AnimatedDockItemWidgetState extends State<AnimatedDockItemWidget>
     _controllerRotation.reset();
     _controllerSliding.forward();
 
-    _controllerBackPositioning.forward().then((_) {
-      pointerOffset = Offset.zero;
-      _controllerBackPositioning.reset();
-      widget.dockController.shrinkDurationAfterInsertionCompleted = true;
-      _removeOverlay();
-      widget.dockController.onTryReorder();
-    });
+    _controllerBackPositioning.forward();
   }
 
   /// Callback handling actions on pointer move event. Update [pointerOffset]

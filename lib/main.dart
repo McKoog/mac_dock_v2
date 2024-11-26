@@ -45,6 +45,7 @@ class HomeScreen extends StatelessWidget {
               ],
               builder: (index, dockController, dockItem, updateDock) {
                 return RepaintBoundary(
+                  key: ValueKey(dockItem),
                   child: AnimatedDockItemWidget(
                     index: index,
                     dockController: dockController,
