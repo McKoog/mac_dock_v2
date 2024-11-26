@@ -27,55 +27,63 @@ class AnimatedDockItemWidgetState extends State<AnimatedDockItemWidget>
     with TickerProviderStateMixin {
   /// Controller for positioning overlay widget on the screen while dragging
   late final AnimationController _controllerDragPositioning;
+
   /// Controller for positioning overlay back to [targetIndex] or previous spot
   late final AnimationController _controllerBackPositioning;
+
   /// Controller controlling rotation animation of widget
   late final AnimationController _controllerRotation;
+
   /// Controller controlling sliding animation of widget
   late final AnimationController _controllerSliding;
 
-  late Animation<double> rotationTween;
-  late final Animation<Offset> _slidingTween;
-
   @override
   void initState() {
-    // Initialization of controllers
+    // Initialization of animation controllers
     _controllerDragPositioning = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 50));
     _controllerBackPositioning = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 350));
     _controllerRotation = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 300));
+        vsync: this,
+        value: 0,
+        lowerBound: -1,
+        upperBound: 1,
+        duration: const Duration(milliseconds: 300));
     _controllerSliding = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 100));
-
-    // Initializations of Tweens
-    _slidingTween = Tween<Offset>(begin: Offset.zero, end: const Offset(0, -10))
-        .animate(
-            CurvedAnimation(parent: _controllerSliding, curve: Curves.ease));
+        vsync: this,
+        lowerBound: -10,
+        upperBound: 0,
+        duration: const Duration(milliseconds: 100))
+      ..forward(from: 0);
 
     // Status listener for sliding animation it chained to rotation animation.
     // When sliding animation completed widget start to rotate(shake).
     _controllerSliding.addStatusListener((status) {
       switch (status) {
         case AnimationStatus.dismissed:
-          setState(() {
-            _rotationValue = 0;
-            _controllerRotation.reset();
-          });
+          _rotationValue = 0.12;
+          _controllerRotation.repeat(reverse: true);
         case AnimationStatus.completed:
-          setState(() {
-            _rotationValue = -0.012;
-            _controllerRotation.repeat(reverse: true);
-          });
+          _rotationValue = 0;
+          _controllerRotation.reset();
         default:
           return;
       }
     });
 
     // Necessary for updating overlay position while animating to the right spot
-    _controllerBackPositioning
-        .addListener(() => _overlayEntry?.markNeedsBuild());
+    _controllerBackPositioning.addStatusListener((status) {
+      switch (status) {
+        case AnimationStatus.forward:
+          // need update data in overlay for back animation
+          _overlayEntry?.markNeedsBuild();
+          // call for updating flag of initial spot animation
+          setState(() {});
+        default:
+          return;
+      }
+    });
 
     super.initState();
   }
@@ -127,16 +135,11 @@ class AnimatedDockItemWidgetState extends State<AnimatedDockItemWidget>
           Offset endOffset = widget.dockController
               .calculateBackToIndexCorrection(pointerOffset);
 
-          final rotationTween = Tween<double>(begin: _rotationValue, end: 0.012)
-              .animate(_controllerRotation);
-          final positioningTween =
-              Tween<Offset>(begin: Offset.zero, end: endOffset).animate(
-                  CurvedAnimation(
-                      parent: _controllerBackPositioning,
-                      curve: Curves.easeOutExpo));
+          final backCurve = CurvedAnimation(
+              parent: _controllerBackPositioning, curve: Curves.easeOutExpo);
 
           return Positioned(
-            top: position.dy,
+            top: position.dy - 10,
             left: position.dx,
             child: IgnorePointer(
               child: AnimatedBuilder(
@@ -148,18 +151,23 @@ class AnimatedDockItemWidgetState extends State<AnimatedDockItemWidget>
                   );
                 },
                 child: AnimatedBuilder(
-                  animation: positioningTween,
+                  animation: _controllerBackPositioning,
                   builder: (BuildContext context, Widget? child) {
                     return Transform.translate(
-                      offset: positioningTween.value,
+                      offset: Offset(endOffset.dx * backCurve.value,
+                          endOffset.dy * backCurve.value),
                       child: child,
                     );
                   },
-                  child: Transform.translate(
-                    offset: const Offset(0, -10),
-                    child: RotationTransition(
-                        turns: rotationTween,
-                        child: _BaseDockItem(iconData: widget.iconData)),
+                  child: AnimatedBuilder(
+                    animation: _controllerRotation,
+                    builder: (context, child) {
+                      return Transform.rotate(
+                        angle: _controllerRotation.value * _rotationValue,
+                        child: child,
+                      );
+                    },
+                    child: _BaseDockItem(iconData: widget.iconData),
                   ),
                 ),
               ),
@@ -185,7 +193,7 @@ class AnimatedDockItemWidgetState extends State<AnimatedDockItemWidget>
         widget.dockController.isAnimatingTarget) return;
 
     if (!_controllerSliding.isAnimating) {
-      _controllerSliding.forward();
+      _controllerSliding.reverse();
     }
   }
 
@@ -213,10 +221,9 @@ class AnimatedDockItemWidgetState extends State<AnimatedDockItemWidget>
 
     widget.dockController.prepareDockDataSnapshot();
 
-    _rotationValue = 0;
     _controllerDragPositioning.reset();
     _controllerRotation.reset();
-    _controllerSliding.reset();
+    _controllerSliding.forward();
 
     _controllerBackPositioning.forward().then((_) {
       pointerOffset = Offset.zero;
@@ -264,15 +271,12 @@ class AnimatedDockItemWidgetState extends State<AnimatedDockItemWidget>
   /// animation through [_controllerSliding] controller.
   void _onExitItem(PointerExitEvent event) {
     if (!widget.dockController.isDragging) {
-      _controllerSliding.reverse();
+      _controllerSliding.forward();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final rotationTween = Tween<double>(begin: _rotationValue, end: 0.012)
-        .animate(_controllerRotation);
-
     return AnimatedPadding(
       duration: _expandingDuration,
       padding: EdgeInsets.only(
@@ -285,26 +289,33 @@ class AnimatedDockItemWidgetState extends State<AnimatedDockItemWidget>
               hitTestBehavior: HitTestBehavior.translucent,
               onExit: _onExitItem,
               child: AnimatedBuilder(
-                animation: _slidingTween,
+                animation: _controllerSliding,
                 builder: (context, child) {
                   return Transform.translate(
-                    offset: _slidingTween.value,
+                    offset: Offset.zero.translate(0, _controllerSliding.value),
                     child: child,
                   );
                 },
-                child: RotationTransition(
-                    turns: rotationTween,
-                    child: Listener(
-                      behavior: HitTestBehavior.translucent,
-                      onPointerHover: _onPointerHover,
-                      onPointerDown: _onPointerDown,
-                      onPointerUp: _onPointerUp,
-                      onPointerMove: _onPointerMove,
-                      child: _StartSideExpandingListener(
-                          index: widget.index,
-                          dockController: widget.dockController,
-                          child: _BaseDockItem(iconData: widget.iconData)),
-                    )),
+                child: AnimatedBuilder(
+                  animation: _controllerRotation,
+                  builder: (context, child) {
+                    return Transform.rotate(
+                      angle: _controllerRotation.value * _rotationValue,
+                      child: child,
+                    );
+                  },
+                  child: Listener(
+                    behavior: HitTestBehavior.translucent,
+                    onPointerHover: _onPointerHover,
+                    onPointerDown: _onPointerDown,
+                    onPointerUp: _onPointerUp,
+                    onPointerMove: _onPointerMove,
+                    child: _StartSideExpandingListener(
+                        index: widget.index,
+                        dockController: widget.dockController,
+                        child: _BaseDockItem(iconData: widget.iconData)),
+                  ),
+                ),
               ),
             ),
     );

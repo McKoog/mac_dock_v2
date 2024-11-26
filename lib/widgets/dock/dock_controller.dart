@@ -70,7 +70,7 @@ class DockController {
 
   /// Showing if animated dummy slot should show instead of current [DockItem]
   bool isShowAnimatedDummySlot(int index) =>
-      isDragging && draggedIndex == index ||
+      (isDragging && draggedIndex == index) ||
       isAnimatingBackToSlot ||
       isAnimatingTarget;
 
