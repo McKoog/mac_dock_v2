@@ -3,6 +3,7 @@ import 'package:mac_dock_v2/widgets/dock/dock_item/dock_item_widget.dart';
 import 'package:mac_dock_v2/widgets/dock/dock_widget.dart';
 import 'package:mac_dock_v2/models/dock_item.dart';
 
+
 void main() {
   runApp(const App());
 }
@@ -43,10 +44,12 @@ class HomeScreen extends StatelessWidget {
                 DockItem(iconData: Icons.photo),
               ],
               builder: (index, dockController, dockItem, updateDock) {
-                return AnimatedDockItemWidget(
-                  index: index,
-                  dockController: dockController,
-                  iconData: dockItem.iconData,
+                return RepaintBoundary(
+                  child: AnimatedDockItemWidget(
+                    index: index,
+                    dockController: dockController,
+                    iconData: dockItem.iconData,
+                  ),
                 );
               },
             ),
