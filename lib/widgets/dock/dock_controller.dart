@@ -71,8 +71,9 @@ class DockController {
   /// Showing if animated dummy slot should show instead of current [DockItem]
   bool isShowAnimatedDummySlot(int index) =>
       (isDragging && draggedIndex == index) ||
-      isAnimatingBackToSlot ||
-      isAnimatingTarget;
+          isAnimatingBackToSlot ||
+              (isAnimatingTarget && dockDataSnapshot != null)
+  ;
 
   /// Callback changing controller data for selected [DockItem]
   void handleOnPointerDown(int index) {
